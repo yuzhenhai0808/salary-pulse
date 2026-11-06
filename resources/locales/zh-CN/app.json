@@ -138,7 +138,7 @@
   "about.version": "版本",
   "about.license": "开源协议",
   "about.privacy": "没有账号、云同步、广告或工作行为监控。配置保存在当前用户的本地 JSON 文件中。",
-  "about.build": "Apple Silicon · macOS 13+ · 私有本地版",
+  "about.build": "Apple Silicon · macOS 13+ · v0.1.0",
   "about.source": "项目源码",
   "demo.label": "浏览器演示",
   "demo.note": "桌面能力需要安装版；演示偏好仅存于当前浏览器。",

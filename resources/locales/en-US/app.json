@@ -138,7 +138,7 @@
   "about.version": "Version",
   "about.license": "License",
   "about.privacy": "No accounts, cloud sync, ads, or work monitoring. Your settings stay in local JSON files under your user account.",
-  "about.build": "Apple Silicon · macOS 13+ · Private Local Build",
+  "about.build": "Apple Silicon · macOS 13+ · v0.1.0",
   "about.source": "Source Code",
   "demo.label": "Browser Demo",
   "demo.note": "Native features require the Mac app. Demo preferences stay in this browser only.",

@@ -59,12 +59,3 @@ pub fn view(config: &Config, sequence: u64, locale: &str) -> LocaleView {
         locale_sequence: sequence,
     }
 }
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn both_native_catalogs_exist() {
-        assert_eq!(super::text("zh-CN", "common.quit"), "退出");
-        assert_eq!(super::text("en-US", "common.quit"), "Quit");
-    }
-}

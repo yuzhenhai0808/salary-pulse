@@ -14,7 +14,6 @@ fn main() {
             "open_data_dir",
             "reset_data",
             "recover_data",
-            "report_smoke",
             "preview_salary",
         ]),
     ))

@@ -17,7 +17,6 @@
     "allow-open-data-dir",
     "allow-reset-data",
     "allow-recover-data",
-    "allow-report-smoke",
     "allow-preview-salary"
   ]
 }

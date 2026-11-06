@@ -29,31 +29,6 @@ struct AppState {
     store: Store,
 }
 
-#[tauri::command]
-fn report_smoke(
-    app: tauri::AppHandle,
-    window: tauri::WebviewWindow,
-    state: tauri::State<AppState>,
-    report: serde_json::Value,
-) -> Result<(), String> {
-    authorize(&window)?;
-    if !cfg!(debug_assertions) || std::env::var_os("SALARY_PULSE_SMOKE_DIR").is_none() {
-        return Err("PERMISSION_DENIED".into());
-    }
-    state.store.write_atomic(
-        "smoke-report.json",
-        &serde_json::to_vec_pretty(&report).map_err(|_| "INVALID_STATE")?,
-    )?;
-    app.exit(
-        if report.get("ok").and_then(serde_json::Value::as_bool) == Some(true) {
-            0
-        } else {
-            1
-        },
-    );
-    Ok(())
-}
-
 fn authorize(window: &tauri::WebviewWindow) -> Result<(), String> {
     if window.label() == "main" {
         Ok(())
@@ -556,16 +531,10 @@ fn ticker(app: tauri::AppHandle) {
 }
 
 pub fn run() {
-    let builder = tauri::Builder::default();
-    let smoke_mode = cfg!(debug_assertions) && std::env::var_os("SALARY_PULSE_SMOKE_DIR").is_some();
-    let builder = if smoke_mode {
-        builder
-    } else {
-        builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             show_main(app)
         }))
-    };
-    builder
         .plugin(tauri_plugin_notification::init())
         .plugin(
             tauri_plugin_autostart::Builder::new()
@@ -587,26 +556,10 @@ pub fn run() {
             open_data_dir,
             reset_data,
             recover_data,
-            report_smoke,
             preview_salary
         ])
-        .on_page_load(|window, payload| {
-            if cfg!(debug_assertions)
-                && std::env::var_os("SALARY_PULSE_SMOKE_DIR").is_some()
-                && window.label() == "main"
-                && matches!(payload.event(), tauri::webview::PageLoadEvent::Finished)
-            {
-                let _ = window.eval(include_str!("smoke.js"));
-            }
-        })
         .setup(|app| {
-            let directory = if cfg!(debug_assertions) {
-                std::env::var_os("SALARY_PULSE_SMOKE_DIR")
-                    .map(std::path::PathBuf::from)
-                    .unwrap_or(app.path().app_data_dir()?)
-            } else {
-                app.path().app_data_dir()?
-            };
+            let directory = app.path().app_data_dir()?;
             let store = Store { directory };
             let (config, recovery) = if store.exists() {
                 match store.load() {

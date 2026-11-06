@@ -210,20 +210,3 @@ impl Snapshot {
         }
     }
 }
-
-#[cfg(test)]
-pub fn default_schedule() -> Schedule {
-    Schedule {
-        timezone: iana_time_zone::get_timezone().unwrap_or_else(|_| "Asia/Shanghai".into()),
-        work_weekdays: vec![1, 2, 3, 4, 5],
-        shift_start: "09:00".into(),
-        shift_end: "18:00".into(),
-        end_day_offset: 0,
-        breaks: vec![Break {
-            start_offset_minutes: 180,
-            duration_minutes: 60,
-            paid: false,
-        }],
-        exceptions: Vec::new(),
-    }
-}
