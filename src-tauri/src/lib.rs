@@ -3,9 +3,9 @@ mod locale;
 mod model;
 mod storage;
 
-use chrono::{DateTime, Duration as ChronoDuration, Timelike, Utc};
+use chrono::{DateTime, Timelike, Utc};
 use model::{
-    Config, LocaleView, PreviewInput, Rules, SalaryPreview, SettingsPayload, SettingsView, Snapshot,
+    Config, LocaleView, PreviewInput, SalaryPreview, SettingsPayload, SettingsView, Snapshot,
 };
 use std::{sync::Mutex, time::Duration};
 use storage::Store;
@@ -126,62 +126,14 @@ fn save_settings(
     app: tauri::AppHandle,
     window: tauri::WebviewWindow,
     state: tauri::State<AppState>,
-    mut payload: SettingsPayload,
+    payload: SettingsPayload,
 ) -> Result<SettingsView, String> {
     authorize(&window)?;
-    engine::validate_schedule(&payload.schedule)?;
-    payload.salary = engine::normalize_salary(payload.salary, &payload.schedule)?;
     let mut r = state.runtime.lock().map_err(|_| "INVALID_STATE")?;
     if r.recovery {
         return Err("RECOVERY_REQUIRED".into());
     }
-    if r.config.revision != payload.expected_revision {
-        return Err("REVISION_CONFLICT".into());
-    }
-    let now = Utc::now();
-    let mut next = r.config.clone();
-    next.preferences = payload.preferences;
-    next.schema_version = 2;
-    next.preferences.floating_position = r.config.preferences.floating_position;
-    next.revision += 1;
-    let current = next.rules.last();
-    let changed = current.is_none_or(|rules| {
-        serde_json::to_value(&rules.salary).ok() != serde_json::to_value(&payload.salary).ok()
-            || serde_json::to_value(&rules.schedule).ok()
-                != serde_json::to_value(&payload.schedule).ok()
-    });
-    if changed {
-        let first = next.rules.is_empty();
-        let effective = if first {
-            let (effective, tracking) = engine::initial_times(
-                &payload.salary,
-                &payload.schedule,
-                now,
-                payload.start_from_shift,
-            )?;
-            next.tracking_started_at_utc = Some(tracking.to_rfc3339());
-            effective
-        } else {
-            engine::next_effective(&next, &payload.schedule, &payload.salary.currency, now)?
-        };
-        next.rules.retain(|rules| {
-            DateTime::parse_from_rfc3339(&rules.effective_from_utc)
-                .is_ok_and(|t| t.with_timezone(&Utc) <= now)
-        });
-        // Retain recent rule boundaries and the most recent baseline, all in one atomic document.
-        while next.rules.len() > 2
-            && DateTime::parse_from_rfc3339(&next.rules[1].effective_from_utc)
-                .is_ok_and(|t| t.with_timezone(&Utc) < now - ChronoDuration::days(7))
-        {
-            next.rules.remove(0);
-        }
-        next.rules.push(Rules {
-            id: format!("r-{}", now.timestamp_micros()),
-            effective_from_utc: effective.to_rfc3339(),
-            salary: payload.salary,
-            schedule: payload.schedule,
-        });
-    }
+    let next = engine::apply_settings(&r.config, payload, Utc::now())?;
     state.store.save(&next, Some(r.config.revision))?;
     r.config = next;
     r.locale = locale::resolve(&r.config.preferences.language);

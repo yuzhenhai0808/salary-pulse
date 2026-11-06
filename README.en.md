@@ -25,7 +25,7 @@ Apple Silicon only. The minimum build target is macOS 13; it was built and run o
 
 Settings are local JSON under `~/Library/Application Support/com.yuzhenhai.salarypulse/`. No salary upload, telemetry, or work monitoring. Files are not encrypted; hiding earnings protects the display only. Uninstalling does not delete settings; use the data deletion option when needed.
 
-Earnings are estimates, not payment confirmation. Monthly salary is spread across the month's scheduled paid time. Mid-month setup accrues only effective intervals. Rule changes begin on a safe later date; there is no automatic currency conversion. Notifications are attempted only while the app runs and may be limited by macOS or Focus.
+Earnings are estimates, not payment confirmation. Monthly salary is spread across the month's scheduled paid time. Saving salary or schedule changes takes effect immediately and recalculates today's earnings and countdown, keeping the original tracking start. No future activation is scheduled and there is no automatic currency conversion. Notifications are attempted only while the app runs and may be limited by macOS or Focus.
 
 ## Build from Source
 

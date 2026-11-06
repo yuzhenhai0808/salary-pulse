@@ -731,19 +731,8 @@ function SettingsForm({
     <main className="settings-page">
       <div className="page-heading">
         <h1>{t(first ? "onboarding.title" : "settings.title")}</h1>
-        <p>{t(first ? "onboarding.subtitle" : "settings.nextDay")}</p>
+        <p>{t(first ? "onboarding.subtitle" : "settings.immediate")}</p>
       </div>
-      {rule && new Date(rule.effectiveFromUtc) > new Date() && (
-        <p className="notice warning">
-          {t("settings.pending", {
-            date: new Intl.DateTimeFormat(i18n.language, {
-              dateStyle: "medium",
-              timeStyle: "short",
-              timeZone: rule.schedule.timezone,
-            }).format(new Date(rule.effectiveFromUtc)),
-          })}
-        </p>
-      )}
       <form onSubmit={(event) => void submit(event)}>
         <section className="form-section">
           <h2>

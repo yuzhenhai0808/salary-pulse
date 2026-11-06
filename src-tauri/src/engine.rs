@@ -1,4 +1,4 @@
-use crate::model::{Config, Rules, Salary, SalaryPreview, Schedule, Snapshot};
+use crate::model::{Config, Rules, Salary, SalaryPreview, Schedule, SettingsPayload, Snapshot};
 use chrono::{
     DateTime, Datelike, Duration, LocalResult, NaiveDate, NaiveDateTime, NaiveTime, TimeZone,
     Timelike, Utc,
@@ -515,49 +515,56 @@ pub fn initial_times(
     Ok((midnight, if from_shift { midnight } else { now }))
 }
 
-pub fn next_effective(
+pub fn apply_settings(
     config: &Config,
-    schedule: &Schedule,
-    currency: &str,
+    mut payload: SettingsPayload,
     now: DateTime<Utc>,
-) -> Result<DateTime<Utc>, String> {
-    let tz: Tz = schedule.timezone.parse().map_err(|_| "INVALID_TIMEZONE")?;
-    let old = config
+) -> Result<Config, String> {
+    if config.revision != payload.expected_revision {
+        return Err("REVISION_CONFLICT".into());
+    }
+    validate_schedule(&payload.schedule)?;
+    payload.salary = normalize_salary(payload.salary, &payload.schedule)?;
+    let current = config
         .rules
         .iter()
-        .rfind(|r| utc(&r.effective_from_utc).is_ok_and(|t| t <= now))
-        .ok_or("INVALID_STATE")?;
-    if old.schedule.timezone != schedule.timezone {
+        .rfind(|r| utc(&r.effective_from_utc).is_ok_and(|t| t <= now));
+    if current.is_some_and(|r| r.schedule.timezone != payload.schedule.timezone) {
         return Err("TIMEZONE_RESET_REQUIRED".into());
     }
-    let base = now.with_timezone(&tz).date_naive();
-    let candidate_rules = Rules {
-        id: "candidate".into(),
-        effective_from_utc: now.to_rfc3339(),
-        salary: old.salary.clone(),
-        schedule: schedule.clone(),
-    };
-    // Start after a full future midnight. Old shifts admitted before the boundary are also checked.
-    for offset in 1..=366 {
-        let date = base + Duration::days(offset);
-        let boundary = local_utc(tz, date.and_hms_opt(0, 0, 0).ok_or("INVALID_DATE")?, false)?.0;
-        let Some(new_shift) = resolve_shift(&candidate_rules, date)? else {
-            continue;
-        };
-        let mut safe = true;
-        for old_date in [date - Duration::days(1), date] {
-            if let Some(shift) = resolve_shift(old, old_date)? {
-                if shift.start < boundary
-                    && (shift.end > new_shift.start
-                        || (old.salary.currency != currency && shift.end > boundary))
-                {
-                    safe = false;
-                }
-            }
-        }
-        if safe {
-            return Ok(boundary);
-        }
-    }
-    Err("NO_SAFE_EFFECTIVE_DATE".into())
+    let mut next = config.clone();
+    next.schema_version = 2;
+    next.revision = config.revision.checked_add(1).ok_or("INVALID_STATE")?;
+    next.preferences = payload.preferences;
+    next.preferences.floating_position = config.preferences.floating_position;
+    let (start, initial_tracking) = initial_times(
+        &payload.salary,
+        &payload.schedule,
+        now,
+        payload.start_from_shift,
+    )?;
+    let tracking = config
+        .tracking_started_at_utc
+        .as_deref()
+        .map(utc)
+        .transpose()?
+        .unwrap_or(initial_tracking);
+    next.tracking_started_at_utc = config
+        .tracking_started_at_utc
+        .clone()
+        .or_else(|| Some(tracking.to_rfc3339()));
+    // One current rule replaces both the old rule and any legacy future changes.
+    // Keep the tracking origin and shift identity, not a delayed activation date.
+    next.rules = vec![Rules {
+        id: current
+            .or_else(|| config.rules.first())
+            .map(|r| r.id.clone())
+            .unwrap_or_else(|| format!("r-{}", now.timestamp_micros())),
+        effective_from_utc: start.min(tracking).to_rfc3339(),
+        salary: payload.salary,
+        schedule: payload.schedule,
+    }];
+    validate_config(&next)?;
+    snapshot(&next, now)?;
+    Ok(next)
 }
