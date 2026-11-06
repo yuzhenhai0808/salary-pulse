@@ -1,0 +1,12 @@
+{
+  "identifier": "floating",
+  "description": "Read-only snapshot and window dragging",
+  "windows": ["floating"],
+  "permissions": [
+    "core:event:default",
+    "core:window:allow-start-dragging",
+    "allow-get-snapshot",
+    "allow-get-locale",
+    "allow-set-floating"
+  ]
+}

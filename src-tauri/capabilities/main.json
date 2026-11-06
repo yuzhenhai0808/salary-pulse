@@ -1,0 +1,23 @@
+{
+  "identifier": "main",
+  "description": "Settings and workday dashboard",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "allow-get-settings",
+    "allow-save-settings",
+    "allow-get-snapshot",
+    "allow-get-locale",
+    "allow-set-language",
+    "allow-set-privacy",
+    "allow-set-floating",
+    "allow-test-notification",
+    "allow-set-autostart",
+    "allow-get-autostart",
+    "allow-open-data-dir",
+    "allow-reset-data",
+    "allow-recover-data",
+    "allow-report-smoke",
+    "allow-preview-salary"
+  ]
+}
